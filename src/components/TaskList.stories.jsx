@@ -1,8 +1,47 @@
-import { fn } from "@storybook/test"
+import { Provider } from "react-redux";
+import { configureStore, createSlice } from "@reduxjs/toolkit";
 
 import TaskList from "./TaskList"
 import * as TaskStories from './Task.stories'
 
+// mock of state of the store
+export const MockedState = {
+	tasks: [
+		{...TaskStories.Default.args.task, id: '1', title: 'Task 1'},
+		{...TaskStories.Default.args.task, id: '2', title: 'Task 2'},
+		{...TaskStories.Default.args.task, id: '3', title: 'Task 3'},
+		{...TaskStories.Default.args.task, id: '4', title: 'Task 4'},
+		{...TaskStories.Default.args.task, id: '5', title: 'Task 5'},
+		{...TaskStories.Default.args.task, id: '6', title: 'Task 6'},
+	], 
+	status: 'idle',
+	error: null,
+};
+
+// A super-simple mock of a redux store
+const Mockstore = ({ taskboxState, children }) => (
+  <Provider
+    store={configureStore({
+      reducer: {
+        taskbox: createSlice({
+          name: 'taskbox',
+          initialState: taskboxState,
+          reducers: {
+            updateTaskState: (state, action) => {
+              const { id, newTaskState } = action.payload;
+              const task = state.tasks.findIndex((task) => task.id === id);
+              if (task >= 0) {
+                state.tasks[task].state = newTaskState;
+              }
+            },
+          },
+        }).reducer,
+      },
+    })}
+  >
+    {children}
+  </Provider>
+);
 
 const meta = {
 	component: TaskList,
@@ -10,7 +49,7 @@ const meta = {
 	decorators: [(story) => <div style={{margin: '3rem'}}>{story()}</div>],
 	tags: ['autodocs'],
 	// Our exports that end in "Data" are not stories
-	excludeStories: /.*Data$/,
+	excludeStories: /.*MockedState$/,
 	args: {
 		...TaskStories.ActionsData,
 	}
@@ -19,43 +58,86 @@ const meta = {
 export default meta;
 
 export const Default = {
-	args: {
-		tasks: [
-			{...TaskStories.Default.args.task, id: '1', title: 'Task 1'},
-			{...TaskStories.Default.args.task, id: '2', title: 'Task 2'},
-			{...TaskStories.Default.args.task, id: '3', title: 'Task 3'},
-			{...TaskStories.Default.args.task, id: '4', title: 'Task 4'},
-			{...TaskStories.Default.args.task, id: '5', title: 'Task 5'},
-			{...TaskStories.Default.args.task, id: '6', title: 'Task 6'},
-		],
-		task: {
-			id: '1',
-			title: 'Test Task',
-			state: 'TASK_INBOX',
-		}
-	},
-};
+	decorators: [
+		(story) => <Mockstore taskboxState={MockedState}>{story()}</Mockstore>
+	]
+}
+
+// export const Default = {
+// 	args: {
+// 		tasks: [
+// 			{...TaskStories.Default.args.task, id: '1', title: 'Task 1'},
+// 			{...TaskStories.Default.args.task, id: '2', title: 'Task 2'},
+// 			{...TaskStories.Default.args.task, id: '3', title: 'Task 3'},
+// 			{...TaskStories.Default.args.task, id: '4', title: 'Task 4'},
+// 			{...TaskStories.Default.args.task, id: '5', title: 'Task 5'},
+// 			{...TaskStories.Default.args.task, id: '6', title: 'Task 6'},
+// 		],
+// 		task: {
+// 			id: '1',
+// 			title: 'Test Task',
+// 			state: 'TASK_INBOX',
+// 		}
+// 	},
+// };
 
 export const WithPinnedTasks = {
-	args: {
-		tasks: [
-			...Default.args.tasks.slice(0, 5),
+	decorators: [
+		(story) => {
+			const pinnedTasks = [
+				...MockedState.tasks.slice(0, 5),
 			{id: '6', title: 'Task 6 (pinned)', state: 'TASK_PINNED'},
-		],
-	}
+			];
+
+			return (
+				<Mockstore taskboxState={{
+					...MockedState,
+					tasks: pinnedTasks,
+				}}>
+					{story()}
+				</Mockstore>
+			)
+		}
+	]
+	// args: {
+	// 	tasks: [
+	// 		...Default.args.tasks.slice(0, 5),
+	// 		{id: '6', title: 'Task 6 (pinned)', state: 'TASK_PINNED'},
+	// 	],
+	// }
 }
 
 export const Loading = {
-	args: {
-		tasks: [],
-		loading: true,
-	}
+	decorators: [
+		(story) => (
+				<Mockstore taskboxState={{
+					...MockedState,
+					status: 'loading',
+				}}>
+					{story()}
+				</Mockstore>
+			),
+	]
+	// args: {
+	// 	tasks: [],
+	// 	loading: true,
+	// }
 }
 
 export const Empty = {
-	args: {
-		...Loading.args,
-		loading: false,
-	}
+	decorators: [
+		(story) => (
+				<Mockstore taskboxState={{
+					...MockedState,
+					tasks: []
+				}}>
+					{story()}
+				</Mockstore>
+			),
+	]
+	// args: {
+	// 	...Loading.args,
+	// 	loading: false,
+	// }
 }
 
